@@ -1,0 +1,14 @@
+*** Realizando a busca sem o auxílio de índice
+1507311 298.8 30/03/1993 5 Bauru 18 OLEGARIO TUPINAMBA
+2532732 04/01/1955 18 OLEGARIO TUPINAMBA
+2210806 200.1 18 OLEGARIO TUPINAMBA
+Número de páginas de disco acessadas: 11
+
+*** Realizando a busca com o auxílio de um índice secundário fortemente ligado
+1507311 298.8 30/03/1993 5 Bauru 18 OLEGARIO TUPINAMBA
+2532732 04/01/1955 18 OLEGARIO TUPINAMBA
+2210806 200.1 18 OLEGARIO TUPINAMBA
+Número de páginas de disco para carregar o arquivo de índice: 5
+Número de páginas de disco para acessar o arquivo de dados: 3
+
+Diferença no número de páginas de disco acessadas: 8
