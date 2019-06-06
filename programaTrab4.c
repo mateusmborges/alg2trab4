@@ -52,6 +52,7 @@ int main(){
 			strcpy(camposEntrada[3],token);
 		}
 		if(i > 4 && token){
+			strcat(camposEntrada[3]," ");
 			strcat(camposEntrada[3],token);
 		}
 		token = strtok(NULL," ");	
@@ -61,6 +62,20 @@ int main(){
 	for(i = 0; i < 4; i++){
 		trim(camposEntrada[i]);
 	}
+	
+	i = 0;
+	if(camposEntrada[3][i] == '\"'){
+		camposEntrada[3][i] = camposEntrada[3][i+1];
+		while(camposEntrada[3][i] != '\"'){
+			camposEntrada[3][i] = camposEntrada[3][i+1];
+			i++;
+		}
+		if(camposEntrada[3][i-1] == '\"'){
+			camposEntrada[3][i-1] = '\0';
+		}
+	}
+
+
 
 	//verificar qual é a funcionalidade escolhida
 	switch(func){
@@ -99,7 +114,7 @@ int main(){
 		break;
 		//se for a funcionalidade 12
 		case 12:
-			//recuperacaoindice(camposEntrada[0], camposEntrada[1], camposEntrada[2], camposEntrada[3]);
+			recuperacaoindice(camposEntrada[0], camposEntrada[1], camposEntrada[2], camposEntrada[3]);
 		break;
 		//se for a funcionalidade 13
 		case 13:
