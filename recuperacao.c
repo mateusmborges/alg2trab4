@@ -27,13 +27,13 @@ int leitura_arquivo_indice(struct indice ind[], int qtdregs, FILE* arqind){
 
 int buscabinaria(struct indice ind[], int qtdregs, char* escola){
 	/* 	DECLARAÇÃO DE VARIÁVEIS 
-		i = variavel para laços for
 		inicio = posição do inicio
 		meio = posição do meio
 		fim = posição do fim
+		pos = posição de buffer para ler algumas posições antes
 		buffer = string de buffer para guardar o nome da escola lido na posicao meio
 	*/
-	int i, inicio, meio, fim, pos;
+	int inicio, meio, fim, pos;
 	char buffer[28];
 
 	//atualiza o inicio, meio e fim, e o buffer
@@ -60,6 +60,7 @@ int buscabinaria(struct indice ind[], int qtdregs, char* escola){
 			for(pos = meio-1; pos == inicio; pos--){
 				memset(buffer,'\0',28);				//limpa o buffer
 				strcpy(buffer,ind[pos].nomeEscola);	//le o nome da escola da posição meio e guarda no buffer
+				//se forem diferentes, retorna a posicao anterior lida
 				if(strcmp(escola,buffer) != 0){
 					return pos + 1;
 				}
@@ -71,15 +72,32 @@ int buscabinaria(struct indice ind[], int qtdregs, char* escola){
 }
 
 void recupera_registro(int rrn, FILE* arq){
-	int nroInscricao, itcv, first = 0;
+	/* 	DECLARAÇÃO DE VARIÁVEIS 
+		nroInscricao = inteiro que guarda o numero de inscricao do registro
+		itcv = inteiro que guarda o indicador de tamanho dos campos variaveis do registro
+		first = booleano de apoio para os prints certos
+		nota = double que guarda a nota do registro
+		regrem = char que guarda o status do registro (se é removido ou não)
+		tag4 = char que guarda a tag do campo cidade ('4')
+		tag4 = char que guarda a tag do campo nomeEscola ('5')
+		data = string que guarda a data do registro
+		campoVar = string que guarda os campos variaveis do registro
+	*/
+	int nroInscricao, itcv, first = NAO;
 	double nota;
 	char regrem, tag4, tag5;
 	char data[11], campoVar[28];
 
+	//para printar certo
 	data[10] = '\0';
 
+	//acesso direto ao registro com rrn relacionado
 	fseek(arq,80*rrn,SEEK_CUR);
+
+	//le o status do registro
 	fread(&regrem,sizeof(char),1,arq);
+
+	//se o registro não estiver removido, printa os dados lidos do registro
 	if(regrem == '-'){
 		fseek(arq,4,SEEK_CUR);
 		fread(&nroInscricao,sizeof(int),1,arq);	//le os 4 bytes seguintes e coloca em nroInscricao
@@ -138,7 +156,6 @@ void recupera_registro(int rrn, FILE* arq){
 
 int recuperacao(char* readFile){
 	/* 	DECLARAÇÃO DE VARIÁVEIS 
-		i = variavel para laços for
 		acessos = contador de páginas de disco acessadas
 		numReg = contador de numero de registros lidos
 		encadeamento = inteiro para guardar o encadeamento
@@ -147,7 +164,6 @@ int recuperacao(char* readFile){
 		nota = double para guardar a nota
 		status = char para guardar o status do arquivo
 		regrem = char para ver se o registro é removido ou nao
-		arroba = char para passar pelos @
 		tag4 = char para guardar a tag 4		
 		tag5 = char para guardar a tag 5		
 		first = booleano para apoio ao print dos espaços
@@ -155,9 +171,9 @@ int recuperacao(char* readFile){
 		campoVar2 = string para guardar o campo variavel 2
 		data = string para guardar a data
 	*/
-	int i, acessos = 0, numReg = 0, encadeamento, nroInscricao, itcv;
+	int acessos = 0, numReg = 0, encadeamento, nroInscricao, itcv;
 	double nota;
-	char status, regrem, arroba, tag4, tag5;
+	char status, regrem, tag4, tag5;
 	int first = NAO;
 	char campoVar[25], campoVar2[25], data[11];
 
@@ -297,16 +313,21 @@ int recuperacao(char* readFile){
 
 	//fecha o arquivo
 	fclose(arqbin);
+
+	return 0;
 }
 
 int recuperacaoindice(char* readFile, char* indFile, char* nomeCampo, char* valor){
 	/* 	DECLARAÇÃO DE VARIÁVEIS 
 		i = variavel para laços for
+		qtdregs = quantidade de registros que possui o arquivo de indice
+		acessos_indice = quantidade de páginas de disco acessadas no arquivo de indice
+		acessos_arquivo = quantidade de páginas de disco acessadas no arquivo de entrada
+		posicao_certa = posicao do nome da escola no vetor de indices (saida do busca binaria)
 		status = char para guardar o status de um arquivo
 	*/
-	int i, qtdregs = 0, rrn = 0, inicio = 0, media = 0, fim = 0, acessos_indice = 0, acessos_arquivo = 0, posicao_certa = 0;
+	int i, qtdregs = 0, acessos_indice = 0, acessos_arquivo = 0, posicao_certa = 0;
 	char status;
-	char buffer[28];
 
 	//abre o arquivo binario de entrada
 	FILE *arqbin = fopen(readFile,"rb");	//abre o arquivo readFile
@@ -353,32 +374,36 @@ int recuperacaoindice(char* readFile, char* indFile, char* nomeCampo, char* valo
 	//limpar a struct acima
 	for(i = 0; i < qtdregs; i++){
 		memset(ind[i].nomeEscola,'\0',28);
-		ind[i].nroInscricao = -1;
 		ind[i].rrn = -1;
 	}
 
 	//le o arquivo de indice e passa pra uma struct indice, contando quantas páginas de disco foram acessadas
 	acessos_indice = leitura_arquivo_indice(ind, qtdregs, arqind);
 
-	//retorna a posicao certa do valor no 
+	//retorna a posicao certa do valor no vetor de indices
 	posicao_certa = buscabinaria(ind, qtdregs, valor);
 
+	//se existir um registro com o nome da escola dado na entrada
 	if(posicao_certa != -1){
-		vetor_acessos_arquivo[0]++;
+		vetor_acessos_arquivo[0]++;	//incrementa a pagina de disco do cabeçalho
+		//enquanto o valor do nome da escola for igual a algum do indice
 		while(strcmp(ind[posicao_certa].nomeEscola,valor) == 0){
-			fseek(arqbin,16000,SEEK_SET);
-			recupera_registro(ind[posicao_certa].rrn,arqbin);
+			fseek(arqbin,16000,SEEK_SET);								//pula pro inicio dos registros
+			recupera_registro(ind[posicao_certa].rrn,arqbin);			//printa o registro
+			//se nao estiver passado nessa página de disco ainda
 			if(vetor_acessos_arquivo[(ind[posicao_certa].rrn/500)] == 0){
-				vetor_acessos_arquivo[(ind[posicao_certa].rrn/500)]++;
+				vetor_acessos_arquivo[(ind[posicao_certa].rrn/500)]++;	//incrementa o contador dessa página de disco
 			}
 			posicao_certa++;
 		}
 	}
+	//se nao existir um registro com o nome da escola dado na entrada
 	else{
 		printf("Registro inexistente.");
 		return 0;
 	}
 
+	//conta a quantidade de páginas de disco para acessar o arquivo de dados
 	for(i = 0; i < (qtdregs/200 + 1); i++){
 		acessos_arquivo += vetor_acessos_arquivo[i];
 	}
@@ -386,8 +411,9 @@ int recuperacaoindice(char* readFile, char* indFile, char* nomeCampo, char* valo
 	printf("Número de páginas de disco para carregar o arquivo de índice: %d\n",acessos_indice);
 	printf("Número de páginas de disco para acessar o arquivo de dados: %d",acessos_arquivo);
 
-	//fecha o arquivo
+	//fecha os arquivos
 	fclose(arqbin);
+	fclose(arqind);
 
 	return 0;
 }

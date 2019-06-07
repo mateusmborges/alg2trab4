@@ -23,6 +23,20 @@
 #include <locale.h>
 #include <math.h>
 
+/*
+	struct registro = estrutura para conter um registro, com:
+		char removido = char para guardar o status do registro (se '-' ou '*')
+		int encadeamento = inteiro para guardar o numero de encadeamento do registro
+		int nroInscricao = inteiro para guardar o numero de inscricao do registro
+		double nota = double para guardar a nota do registro
+		char data = string para guardar a data do registro
+		int itcv1 = inteiro para guardar o indicador de tamanho do campo variavel 1
+		char tag4 = char para guardar a tag do campo de cidade ('4')
+		char cidade = string para guardar a cidade do registro
+		int itcv2 = inteiro para guardar o indicador de tamanho do campo variavel 2
+		char tag5 = char para guardar a tag do campo de nomeEscola ('5')
+		char nomeEscola = string para guardar o nome da escola do registro
+*/
 struct registro{
 	char removido;
 	int encadeamento;

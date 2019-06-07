@@ -118,7 +118,8 @@ int main(){
 		break;
 		//se for a funcionalidade 13
 		case 13:
-			//remocaoindice(camposEntrada[0], camposEntrada[1], camposEntrada[2]);
+			n = strtol(camposEntrada[2],NULL,10);
+			remocaoindice(camposEntrada[0], camposEntrada[1], n);
 		break;
 		//se for a funcionalidade 14
 		case 14:

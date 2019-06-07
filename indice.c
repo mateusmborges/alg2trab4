@@ -24,12 +24,11 @@ int leituraindice(struct indice ind[], int max, FILE* arq){
 		i = variavel para laços for
 		atual = inteiro para contar quantos registros nao estao removidos
 		buffercv = buffer para guardar o indicador de tamanho do campo variavel
-		buffni = buffer para guardar o numero de inscrição
 		faltante = quantidade de bytes faltantes para acabar o registro
 		regrem = char para verificar qual é o status do registro
 		bufftag = char de buffer para os campos de tag
 	*/
-	int i, atual = 0, buffercv = 0, buffni = 0, faltante = 0;
+	int i, atual = 0, buffercv = 0, faltante = 0;
 	char regrem, bufftag;
 
 	//pula pro começo dos registros
@@ -39,8 +38,7 @@ int leituraindice(struct indice ind[], int max, FILE* arq){
 		fread(&regrem,sizeof(char),1,arq);						//le o char do status do registro
 		//se o registro não estiver removido
 		if(regrem == '-'){
-			fseek(arq,4,SEEK_CUR);								//pula 4 bytes
-			fread(&buffni,sizeof(int),1,arq);					//le o int do nroInscricao
+			fseek(arq,8,SEEK_CUR);								//pula 4 bytes
 			fseek(arq,18,SEEK_CUR);								//pula 4 bytes
 			fread(&buffercv,sizeof(int),1,arq);					//guarda o inteiro lido em um buffer
 			fread(&bufftag,sizeof(char),1,arq);					//guarda o char lido em um buffer
@@ -59,7 +57,6 @@ int leituraindice(struct indice ind[], int max, FILE* arq){
 				fread(&ind[atual].nomeEscola,sizeof(char),buffercv-1,arq);		//le o campo nomeEscola e coloca no indice
 			}
 			if(strcmp(ind[atual].nomeEscola,"") != 0){
-				ind[atual].nroInscricao = buffni;
 				ind[atual].rrn = (ftell(arq)-16001) / 80;
 				atual++;
 			}
@@ -112,13 +109,10 @@ void escritaindice(struct indice ind[], int max, FILE* arqsaida){
 int criarindice(char* arqentrada, char* arqindice){
 	/* 	DECLARAÇÃO DE VARIÁVEIS 
 		i = variavel para laços for
-		vci = valor do campo inteiro
-		atual = variavel do laço para ler todas as linhas de entrada
-		decodvalor = inteiro para decodificar o valor do campo para o switch
-		vcf = valor do campo flutuante
+		qtdmaxreg = inteiro que guarda a quantidade máxima de registros que é possível ter no arquivo de entrada
+		total = inteiro que guarda a quantidade de registros não nulos do arquivo de entrada
 		status = char para guardar o status do arquivo
-		nomeCampo = string para guardar o nome do campo
-		valorCampo = string para guardar o valor do campo
+
 	*/
 	int i, qtdmaxreg = 1, total;
 	char status;
@@ -147,6 +141,13 @@ int criarindice(char* arqentrada, char* arqindice){
 		return ERR_NOTCONSIST;
 	}
 
+	//verifica se o arquivo de indice está consistente
+	fread(&status,sizeof(char),1,saida);
+	if(status != '1'){						//se o arquivo nao está consistente
+		printf("Falha no processamento do arquivo.");
+		return ERR_NOTCONSIST;
+	}
+
 	fseek(entrada,0,SEEK_END);
 	qtdmaxreg = (ftell(entrada)-16000) / 80;
 
@@ -156,7 +157,6 @@ int criarindice(char* arqentrada, char* arqindice){
 	//limpar a struct acima
 	for(i = 0; i < qtdmaxreg; i++){
 		memset(ind[i].nomeEscola,'\0',28);
-		ind[i].nroInscricao = -1;
 		ind[i].rrn = -1;
 	}
 
@@ -180,4 +180,6 @@ int criarindice(char* arqentrada, char* arqindice){
 
 	fclose(entrada);
 	fclose(saida);
+
+	return 0;
 }
