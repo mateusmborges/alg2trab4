@@ -1,6 +1,9 @@
 /* * * * * * * * * * * * * * * * * * *
 	Aluno: Mateus Morishigue Borges
 	NUSP: 9850328
+
+	Aluno: Natã Daniel Gomes de Almeida
+	NUSP: 10851666 
 * * * * * * * * * * * * * * * * * * */
 
 #include "recuperacao.h"
@@ -33,7 +36,7 @@ int buscabinaria(struct indice ind[], int qtdregs, char* escola){
 		pos = posição de buffer para ler algumas posições antes
 		buffer = string de buffer para guardar o nome da escola lido na posicao meio
 	*/
-	int inicio, meio, fim, pos;
+	int inicio, meio, fim, pos = 0;
 	char buffer[28];
 
 	//atualiza o inicio, meio e fim, e o buffer
@@ -57,12 +60,12 @@ int buscabinaria(struct indice ind[], int qtdregs, char* escola){
 			meio = (inicio + fim)/2;				//rrn medio é o meio
 		}
 		else if(strcmp(escola,buffer) == 0){
-			for(pos = meio-1; pos == inicio; pos--){
+			for(pos = inicio; pos <= meio; pos++){
 				memset(buffer,'\0',28);				//limpa o buffer
 				strcpy(buffer,ind[pos].nomeEscola);	//le o nome da escola da posição meio e guarda no buffer
 				//se forem diferentes, retorna a posicao anterior lida
-				if(strcmp(escola,buffer) != 0){
-					return pos + 1;
+				if(strcmp(escola,buffer) == 0){
+					return pos;
 				}
 			}
 			return meio;
@@ -79,7 +82,7 @@ void recupera_registro(int rrn, FILE* arq){
 		nota = double que guarda a nota do registro
 		regrem = char que guarda o status do registro (se é removido ou não)
 		tag4 = char que guarda a tag do campo cidade ('4')
-		tag4 = char que guarda a tag do campo nomeEscola ('5')
+		tag5 = char que guarda a tag do campo nomeEscola ('5')
 		data = string que guarda a data do registro
 		campoVar = string que guarda os campos variaveis do registro
 	*/
@@ -92,7 +95,7 @@ void recupera_registro(int rrn, FILE* arq){
 	data[10] = '\0';
 
 	//acesso direto ao registro com rrn relacionado
-	fseek(arq,80*rrn,SEEK_CUR);
+	fseek(arq,16000+80*rrn,SEEK_SET);
 
 	//le o status do registro
 	fread(&regrem,sizeof(char),1,arq);
@@ -320,13 +323,16 @@ int recuperacao(char* readFile){
 int recuperacaoindice(char* readFile, char* indFile, char* nomeCampo, char* valor){
 	/* 	DECLARAÇÃO DE VARIÁVEIS 
 		i = variavel para laços for
-		qtdregs = quantidade de registros que possui o arquivo de indice
+		qtdregs = quantidade de registros que possui o arquivo de entrada
+		qtdregsind = quantidade de registros que possui o arquivo de indice
 		acessos_indice = quantidade de páginas de disco acessadas no arquivo de indice
 		acessos_arquivo = quantidade de páginas de disco acessadas no arquivo de entrada
 		posicao_certa = posicao do nome da escola no vetor de indices (saida do busca binaria)
+		pag_anterior = qual é a pagina de disco do arquivo que estava em memoria RAM
+		pag_anterior = qual é a pagina de disco do arquivo que está em memoria RAM
 		status = char para guardar o status de um arquivo
 	*/
-	int i, qtdregs = 0, acessos_indice = 0, acessos_arquivo = 0, posicao_certa = 0;
+	int i, qtdregs = 0, qtdregsind = 0, acessos_indice = 0, acessos_arquivo = 0, posicao_certa = 0, pag_anterior = 0, pag_atual = 0;
 	char status;
 
 	//abre o arquivo binario de entrada
@@ -356,43 +362,49 @@ int recuperacaoindice(char* readFile, char* indFile, char* nomeCampo, char* valo
 		printf("Falha no processamento do arquivo.");
 		return ERR_NOTCONSIST;
 	}
-
-	//le a quantidade de registros que possui o arquivo de indice
-	fread(&qtdregs,sizeof(int),1,arqind);
+	
+	//Conta quantos registros existem no arquivo de entrada
+	fseek(arqbin,-1,SEEK_END);
+	qtdregs = (ftell(arqbin)-16001)/80;
 
 	//cria um vetor que conta quantas paginas de disco do arquivo são acessadas
-	int vetor_acessos_arquivo[(qtdregs/200)+1];
+	int vetor_acessos_arquivo[(((qtdregs+100))/200)+1];
 
 	//limpa o vetor acima
-	for(i = 0; i < (qtdregs/200 + 1); i++){
+	for(i = 0; i < ((qtdregs+100)/200 + 1); i++){
 		vetor_acessos_arquivo[i] = 0;
 	}
 
+	//le a quantidade de registros nao removidos no indice
+	fread(&qtdregsind,sizeof(int),1,arqind);
+
 	//cria a struct indice com essa quantidade de registros
-	struct indice ind[qtdregs];
+	struct indice ind[qtdregsind];
 
 	//limpar a struct acima
-	for(i = 0; i < qtdregs; i++){
+	for(i = 0; i < qtdregsind; i++){
 		memset(ind[i].nomeEscola,'\0',28);
 		ind[i].rrn = -1;
 	}
 
 	//le o arquivo de indice e passa pra uma struct indice, contando quantas páginas de disco foram acessadas
-	acessos_indice = leitura_arquivo_indice(ind, qtdregs, arqind);
+	acessos_indice = leitura_arquivo_indice(ind, qtdregsind, arqind);
 
 	//retorna a posicao certa do valor no vetor de indices
-	posicao_certa = buscabinaria(ind, qtdregs, valor);
+	posicao_certa = buscabinaria(ind, qtdregsind, valor);
 
 	//se existir um registro com o nome da escola dado na entrada
 	if(posicao_certa != -1){
-		vetor_acessos_arquivo[0]++;	//incrementa a pagina de disco do cabeçalho
+		vetor_acessos_arquivo[0] = 1;	//incrementa a pagina de disco do cabeçalho
 		//enquanto o valor do nome da escola for igual a algum do indice
 		while(strcmp(ind[posicao_certa].nomeEscola,valor) == 0){
+			pag_anterior = pag_atual;
+			pag_atual = (ind[posicao_certa].rrn / 200) + 1; 
 			fseek(arqbin,16000,SEEK_SET);								//pula pro inicio dos registros
 			recupera_registro(ind[posicao_certa].rrn,arqbin);			//printa o registro
-			//se nao estiver passado nessa página de disco ainda
-			if(vetor_acessos_arquivo[(ind[posicao_certa].rrn/500)] == 0){
-				vetor_acessos_arquivo[(ind[posicao_certa].rrn/500)]++;	//incrementa o contador dessa página de disco
+			//se nao estiver na mesma pagina, incrementa os acessos
+			if(pag_atual != pag_anterior){
+				vetor_acessos_arquivo[pag_atual]++; //incrementa o contador dessa página de disco
 			}
 			posicao_certa++;
 		}
@@ -404,7 +416,7 @@ int recuperacaoindice(char* readFile, char* indFile, char* nomeCampo, char* valo
 	}
 
 	//conta a quantidade de páginas de disco para acessar o arquivo de dados
-	for(i = 0; i < (qtdregs/200 + 1); i++){
+	for(i = 0; i < ((qtdregs+100)/200 + 1); i++){
 		acessos_arquivo += vetor_acessos_arquivo[i];
 	}
 
@@ -415,7 +427,7 @@ int recuperacaoindice(char* readFile, char* indFile, char* nomeCampo, char* valo
 	fclose(arqbin);
 	fclose(arqind);
 
-	return 0;
+	return acessos_arquivo;
 }
 
 		

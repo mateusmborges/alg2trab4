@@ -1,10 +1,16 @@
 /* * * * * * * * * * * * * * * * * * *
 	Aluno: Mateus Morishigue Borges
 	NUSP: 9850328
+
+	Aluno: Natã Daniel Gomes de Almeida
+	NUSP: 10851666 
 * * * * * * * * * * * * * * * * * * */
 
 #include "insercao.h"
+#include "recuperacao.h"
+#include "indice.h"
 #include "auxlib.h"
+#include "remocao.h"
 
 int insercao(char* readFile, int n){
 
@@ -56,7 +62,7 @@ int insercao(char* readFile, int n){
 	fseek(arqbin,-1,SEEK_CUR);
 	//atualiza o status
 	status = '0';
-	//fwrite(&status,sizeof(char),1,arqbin);
+	fwrite(&status,sizeof(char),1,arqbin);
 
 	//le o topo da pilha no cabeçalho
 	fread(&topoPilha,sizeof(int),1,arqbin);
@@ -292,6 +298,409 @@ int insercao(char* readFile, int n){
 
 	//fecha o arquivo de leitura/escrita
 	fclose(arqbin);
+
+	return 0;
+}
+
+void append_indice(struct indice indi[], int max, char *escola, int RRN){
+	int i;
+	for(i = 0; i < max; i++){
+		if (indi[i].rrn == -1){
+			break;
+		}
+	}
+	strcpy(indi[i].nomeEscola,escola);
+	indi[i].rrn = RRN;
+}
+
+int insercaoindice(char *arqentrada, char *arqindice, int n){
+	/* 	DECLARAÇÃO DE VARIÁVEIS 
+		i = variavel para laços for
+		j = variavel para laços for
+		atual = variavel do laço para ler todas as linhas de entrada
+		entrou1 = inteiro para apoio na geração das strings variáveis
+		entrou2 = inteiro para apoio na geração das strings variáveis
+		vni = valor do numero de inscrição
+		itcv1 = inteiro para armazenar o indicador de tamanho do campo variavel 1
+		itcv2 = inteiro para armazenar o indicador de tamanho do campo variavel 2
+		topoPilha = inteiro para guardar o topo da pilha
+		vno = valor da nota
+		status = char para guardar o status do arquivo
+		vda = valor da data
+		vcid = valor da cidade
+		vne = valor do nomeEscola
+		regrem = char para ver se o registro é removido ou nao
+	*/
+	int i, j, atual, entrou1 = 0, entrou2 = 0, vni[n], itcv1 = 0, itcv2 = 0, topoPilha, qtd_reg, faltante, rrn;
+	const int menosum = -1;
+	double vno[n];
+	char status, vda[n][13], vcid[n][50], vne[n][50], regrem;
+
+	trim(arqentrada); //tira os \n e \r da string, se tiver
+	trim(arqindice); //tira os \n e \r da string, se tiver
+
+	//verifica se o arquivo readFile existe
+	FILE *arqbin = fopen(arqentrada, "r+b"); //abre o arquivo readFile
+	if (!arqbin)
+	{ //se nao conseguir abrir, retorna o erro
+		printf("Falha no processamento do arquivo.");
+		return ERR_NOTFILE;
+	}
+
+	//abre o arquivo de indice
+	FILE *arqind = fopen(arqindice, "rb"); //abre o arquivo readFile
+	if (!arqind)
+	{ //se nao conseguir abrir, retorna o erro
+		printf("Falha no processamento do arquivo.");
+		return ERR_NOTFILE;
+	}
+
+	//verifica se o arquivo está consistente
+	fread(&status, sizeof(char), 1, arqbin);
+	if (status != '1')
+	{ //se o arquivo nao está consistente
+		printf("Falha no processamento do arquivo.");
+		return ERR_NOTCONSIST;
+	}
+
+	//volta um byte para reescrever o status no arquivo de entrada
+	fseek(arqbin, -1, SEEK_CUR);
+	//atualiza o status
+	status = '0';
+	fwrite(&status,sizeof(char),1,arqbin);
+	
+	fseek(arqind, 1, SEEK_SET);
+	fread(&qtd_reg, sizeof(int), 1, arqind);
+
+
+	struct indice indi[qtd_reg + n];
+	for(i=0; i<(qtd_reg + n); i++){
+		memset(indi[i].nomeEscola, '\0', 28);
+		indi[i].rrn = -1;
+	}
+
+	leitura_arquivo_indice(indi, qtd_reg, arqind);
+	fclose(arqind);
+
+	//le o topo da pilha no cabeçalho
+	fread(&topoPilha, sizeof(int), 1, arqbin);
+
+	/* Laço para passar lendo a entrada n vezes */
+	for (atual = 0; atual < n; atual++){
+		//ler a proxima entrada
+		char entrada[100];
+		clearstring(entrada, 100);
+		fgets(entrada, 100, stdin);
+
+		trim(entrada); //tira o \n e o \r da entrada
+
+		memset(vne[atual],'\0',50);
+		memset(vcid[atual],'\0',50);
+
+		//funcao para gerar as strings dos valores dos campos
+		char *token = strtok(entrada, " ");
+		if (!token)
+		{
+			return ERR_NOTTOKEN;
+		}
+		//funcao para ler os valores dos campos
+		for (i = 0; i < 5; i++)
+		{ //sao 5 campos
+			//se tiver no campo 0
+			if (i == 0 && token)
+			{
+				vni[atual] = strtol(token, NULL, 10); //transforma a string em int
+			}
+			//se tiver no campo 1
+			else if (i == 1 && token)
+			{
+				//se a nota nao for nula
+				if (strcmp(token, "NULO") != 0)
+				{
+					vno[atual] = strtod(token, NULL); //transforma a string em double
+				}
+				else
+				{
+					vno[atual] = -1.0;
+				}
+			}
+			//se tiver no campo 2
+			else if (i == 2 && token)
+			{
+				strcpy(vda[atual], token); //copia a string em token para vda
+			}
+			//se tiver no campo 3
+			else if (i == 3 && token)
+			{
+				strcat(vcid[atual], token); //copia a string em token para vcid
+				//verifica se começa com aspas
+				if (vcid[atual][0] == '\"')
+				{
+					entrou1++; //se é string, entra no proximo if
+				}
+				else if (vcid[atual][0] == 'N')
+				{
+					entrou1 = 0;
+				}
+				if (entrou1 > 0)
+				{
+					//se nao for o final da string, continua concatenando a string
+					if (vcid[atual][strlen(vcid[atual]) - 1] != '\"')
+					{
+						i--;
+						strcat(vcid[atual], " ");
+					}
+				}
+			}
+			//se tiver no campo 4
+			else if (i == 4 && token)
+			{
+				strcat(vne[atual], token); //copia a string em token para vne
+				//verifica se começa com aspas
+				if (vne[atual][0] == '\"')
+				{
+					entrou2++; //se é string, entra no proximo if
+				}
+				if (entrou2 > 0)
+				{
+					//se nao for o final da string, continua concatenando a string
+					if (vne[atual][strlen(vne[atual]) - 1] != '\"')
+					{
+						i--;
+						strcat(vne[atual], " ");
+					}
+				}
+			}
+			//atualiza o token
+			token = strtok(NULL, " ");
+		}
+		/*	Aparentemente está dando problema com alguma entrada com \t
+		trim(vcid[atual]);
+		trim(vne[atual]);
+		trim(vda[atual]);
+		*/
+
+		//os ifs abaixo serve para tirar as aspas se tiver, nas entradas dos campos variaveis
+		if (vda[atual][0] == '\"')
+		{
+			i = 1;
+			while (vda[atual][i] != '\"')
+			{
+				vda[atual][i - 1] = vda[atual][i];
+				i++;
+			}
+			vda[atual][i - 1] = '\0';
+		}
+		if (vcid[atual][0] == '\"')
+		{
+			i = 1;
+			while (vcid[atual][i] != '\"')
+			{
+				vcid[atual][i - 1] = vcid[atual][i];
+				i++;
+			}
+			vcid[atual][i - 1] = '\0';
+		}
+		if (vne[atual][0] == '\"')
+		{
+			i = 1;
+			while (vne[atual][i] != '\"')
+			{
+				vne[atual][i - 1] = vne[atual][i];
+				i++;
+			}
+			vne[atual][i - 1] = '\0';
+		}
+
+		//seta para ler o topo da pilha
+		fseek(arqbin, 1, SEEK_SET);
+		//le o topoPilha
+		fread(&topoPilha, sizeof(int), 1, arqbin);
+		//se nao for -1
+		if (topoPilha != -1)
+		{
+			fseek(arqbin, 16000, SEEK_SET);			 //pula pro começo dos registros
+			fseek(arqbin, 80 * topoPilha, SEEK_CUR); //pula pro rrn do topoPilha
+			fread(&regrem, sizeof(char), 1, arqbin); //le o char removido
+			//se o registro estiver removido
+			if (regrem == '*')
+			{
+				fread(&topoPilha, sizeof(int), 1, arqbin);		//atualiza o topoPilha
+				fseek(arqbin, -5, SEEK_CUR);					//volta pro inicio do registro
+				fputc('-', arqbin);								//marca '-' no byte
+				fwrite(&menosum, sizeof(int), 1, arqbin);		//escreve -1
+				fwrite(&vni[atual], sizeof(int), 1, arqbin);	//escreve o valor do numero de inscricao
+				fwrite(&vno[atual], sizeof(double), 1, arqbin); //escreve o valor da nota
+				//verifica se o valor da data existe
+				if (ehnulo(vda[atual], 13))
+				{ //se nao existir, coloca "\0@@@@@@@@@"
+					for (j = 0; j < 10; j++)
+					{
+						if (j == 0)
+						{
+							fputc('\0', arqbin);
+						}
+						else
+						{
+							fputs("@", arqbin);
+						}
+					}
+				}
+				//se existir
+				else
+				{
+					fwrite(&vda[atual], sizeof(char), 10, arqbin); //escreve o valor da data
+				}
+				//verifica se o valor da cidade existe
+				if (!ehnulo(vcid[atual], 50))
+				{
+					if (strlen(vcid[atual]))
+					{
+						itcv1 = strlen(vcid[atual]) + 2;					   //indicador de tamanho recebe o tamanho da string + 2
+						fwrite(&itcv1, sizeof(int), 1, arqbin);				   //escreve o indicador de tamanho
+						fputc('4', arqbin);									   //coloca o byte '4'
+						fwrite(&vcid[atual], sizeof(char), itcv1 - 1, arqbin); //escreve o campo variavel
+					}
+				}
+				//verifica se o valor do nome da escola existe
+				if (!ehnulo(vne[atual], 50))
+				{
+					if (strlen(vne[atual]))
+					{
+						itcv2 = strlen(vne[atual]) + 2;						  //indicador de tamanho recebe o tamanho da string + 2
+						fwrite(&itcv2, sizeof(int), 1, arqbin);				  //escreve o indicador de tamanho
+						fputc('5', arqbin);									  //coloca o byte '5'
+						fwrite(&vne[atual], sizeof(char), itcv2 - 1, arqbin); //escreve o campo variavel
+					}
+				}
+			}
+			//se o registro nao tiver removido, erro
+			else
+			{
+				printf("Falha no processamento do arquivo.");
+				return ERR_REGNOTREM;
+			}
+			
+			if (!ehnulo(vne[atual], 50))
+			{
+				rrn = (ftell(arqbin) - 16001) / 80;
+				append_indice(indi, qtd_reg + n, vne[atual], rrn);
+			}
+
+			//atualiza o topo da pilha no cabeçalho
+			fseek(arqbin, 1, SEEK_SET);
+			fwrite(&topoPilha, sizeof(int), 1, arqbin);
+		}
+		//se for -1, coloca no final do arquivo
+		else
+		{
+			fseek(arqbin, 0, SEEK_END);						//pula pro final do arquivo
+			fputc('-', arqbin);								//coloca o byte '-'
+			fwrite(&menosum, sizeof(int), 1, arqbin);		//escreve -1
+			fwrite(&vni[atual], sizeof(int), 1, arqbin);	//escreve o valor do numero de inscricao
+			fwrite(&vno[atual], sizeof(double), 1, arqbin); //escreve o valor da nota
+			if (ehnulo(vda[atual], 13))
+			{ //se nao existir, coloca "\0@@@@@@@@@"
+				for (j = 0; j < 10; j++)
+				{
+					if (j == 0)
+					{
+						fputc('\0', arqbin);
+					}
+					else
+					{
+						fputs("@", arqbin);
+					}
+				}
+			}
+			//se existir
+			else
+			{
+				fwrite(&vda[atual], sizeof(char), 10, arqbin); //escreve o valor da data
+			}
+			//verifica se o valor da cidade existe
+			if (!ehnulo(vcid[atual], 50))
+			{
+				if (strlen(vcid[atual]))
+				{
+					itcv1 = strlen(vcid[atual]) + 2;					   //indicador de tamanho recebe o tamanho da string + 2
+					fwrite(&itcv1, sizeof(int), 1, arqbin);				   //escreve o indicador de tamanho
+					fputc('4', arqbin);									   //coloca o byte '4'
+					fwrite(&vcid[atual], sizeof(char), itcv1 - 1, arqbin); //escreve o campo variavel
+				}
+			}
+			//verifica se o valor do nome da escola existe
+			if (!ehnulo(vne[atual], 50))
+			{
+				if (strlen(vne[atual]))
+				{
+					itcv2 = strlen(vne[atual]) + 2;						  //indicador de tamanho recebe o tamanho da string + 2
+					fwrite(&itcv2, sizeof(int), 1, arqbin);				  //escreve o indicador de tamanho
+					fputc('5', arqbin);									  //coloca o byte '5'
+					fwrite(&vne[atual], sizeof(char), itcv2 - 1, arqbin); //escreve o campo variavel
+					rrn = (ftell(arqbin) - 16001) / 80;
+					append_indice(indi, qtd_reg + n, vne[atual], rrn);
+				}
+
+			}
+
+			//completa o registro com lixo
+			faltante = ftell(arqbin) % 80;
+			if (faltante > 0)
+			{
+				for (i = 0; i < (80 - faltante); i++)
+				{
+					fputs("@", arqbin);
+				}
+			}
+		}
+
+		//Completa ate o final do registro com lixo
+		fseek(arqbin, 0, SEEK_END); //pula pro final do arquivo
+		faltante = ftell(arqbin) % 80;
+		if (faltante != 0)
+		{
+			faltante = 80 - faltante;
+		}
+		for (j = 0; j < faltante; j++)
+		{
+			fputs("@", arqbin);
+		}
+
+	} //acaba o for de atual a n
+
+	/*
+	qsort: 
+		Função de ordenação quicksort, incluso na biblioteca stdlib.h
+	argumentos:
+		primeiro numero,
+		qtd total de numeros,
+		tamanho em bytes,
+		funcao de comparação
+	*/
+	qsort(indi[0].nomeEscola, qtd_reg + n, sizeof(indi[0]), cmpNomeEscola);
+
+	FILE* arqind2 = fopen(arqindice,"w+b");
+	if (!arqind2)
+	{ //se nao conseguir abrir, retorna o erro
+		printf("Falha no processamento do arquivo.");
+		return ERR_NOTFILE;
+	}
+
+	write_back_indice(indi,qtd_reg+n,arqind2);
+
+	//volta pro primeiro byte para atualizar o status
+	fseek(arqbin, 0, SEEK_SET);
+	//atualiza o status para consistente
+	status = '1';
+	fwrite(&status, sizeof(char), 1, arqbin);
+
+	//printa o arquivo no stdout com a função feita pelo monitor
+	binarioNaTela1(arqind2);
+
+	//fecha o arquivo de leitura/escrita
+	fclose(arqbin);
+	fclose(arqind2);
 
 	return 0;
 }

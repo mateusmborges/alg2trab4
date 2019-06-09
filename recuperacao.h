@@ -1,6 +1,9 @@
 /* * * * * * * * * * * * * * * * * * *
 	Aluno: Mateus Morishigue Borges
 	NUSP: 9850328
+
+	Aluno: Natã Daniel Gomes de Almeida
+	NUSP: 10851666 
 * * * * * * * * * * * * * * * * * * */
 
 #ifndef RECUPERACAO_H
@@ -60,6 +63,7 @@ int recuperacao(char* readFile);
 	int recuperacaoindice:
 		Funcao que lê os dados de um arquivo de entrada e de um indice,
 		e printa os registros que satisfazem o valor dado
+		Retorna a quantidade de paginas de disco acessadas no arquivo de entrada
 	char readFile:
 		nome do arquivo de entrada a ser lido
 	char indFile:

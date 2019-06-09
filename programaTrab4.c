@@ -1,6 +1,9 @@
 /* * * * * * * * * * * * * * * * * * *
 	Aluno: Mateus Morishigue Borges
 	NUSP: 9850328
+
+	Aluno: Natã Daniel Gomes de Almeida
+	NUSP: 10851666 
 * * * * * * * * * * * * * * * * * * */
 
 #include "remocao.h"
@@ -8,6 +11,8 @@
 #include "insercao.h"
 #include "indice.h"
 #include "auxlib.h"
+#include "ordenacao.h"
+#include "estatisticas.h"
 
 int main(){
 	
@@ -64,6 +69,7 @@ int main(){
 	}
 	
 	i = 0;
+	//tira as aspas do nome da escola
 	if(camposEntrada[3][i] == '\"'){
 		camposEntrada[3][i] = camposEntrada[3][i+1];
 		while(camposEntrada[3][i] != '\"'){
@@ -123,11 +129,12 @@ int main(){
 		break;
 		//se for a funcionalidade 14
 		case 14:
-			//insercaoindice(camposEntrada[0], camposEntrada[1], camposEntrada[2]);
+			n = strtol(camposEntrada[2], NULL, 10);
+			insercaoindice(camposEntrada[0], camposEntrada[1], n);
 		break;
 		//se for a funcionalidade 15
 		case 15:
-			//estatisticas(camposEntrada[0], camposEntrada[1], camposEntrada[2], camposEntrada[3]);
+			estatisticas(camposEntrada[0], camposEntrada[1], camposEntrada[2], camposEntrada[3]);
 		break;
 		
 		//caso nao exista a funcionalidade ainda

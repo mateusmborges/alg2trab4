@@ -1,6 +1,9 @@
 /* * * * * * * * * * * * * * * * * * *
 	Aluno: Mateus Morishigue Borges
 	NUSP: 9850328
+
+	Aluno: Natã Daniel Gomes de Almeida
+	NUSP: 10851666 
 * * * * * * * * * * * * * * * * * * */
 
 #include "remocao.h"
@@ -1031,7 +1034,7 @@ void write_back_indice(struct indice ind[], int max, FILE* arqind){
 		cont = contador para guardar a quantidade de registros nao removidos do indice
 		status = char para guardar o status (consistencia ou inconsistencia) do arquivo
 	*/
-	int i, cont = 0;
+	int i, j, cont = 0;
 	char status;
 	
 	//escreve o status de inconsistente
@@ -1045,7 +1048,10 @@ void write_back_indice(struct indice ind[], int max, FILE* arqind){
 	for(i = 0; i < max; i++){
 		//se o registro nao foi removido do indice, reescreve no indice e incrementa contador
 		if(ind[i].rrn != -1){
-			fwrite(&ind[i].nomeEscola,sizeof(char),28,arqind);
+			fwrite(&ind[i].nomeEscola,sizeof(char),strlen(ind[i].nomeEscola)+1,arqind);
+			for(j = 0; j < 28 - (strlen(ind[i].nomeEscola) + 1); j++){
+				fputs("@",arqind);
+			}
 			fwrite(&ind[i].rrn,sizeof(int),1,arqind);
 			cont++;
 		}
@@ -1104,7 +1110,7 @@ int remocaoindice(char* readFile, char* indFile, int n){
 	fseek(arqbin,-1,SEEK_CUR);
 	//atualiza o status
 	status = '0';
-	//fwrite(&status,sizeof(char),1,arqbin);
+	fwrite(&status,sizeof(char),1,arqbin);
 
 	//limpa as strings acima
 	for(i = 0; i < n; i++){
@@ -1130,6 +1136,7 @@ int remocaoindice(char* readFile, char* indFile, int n){
 
 	//fecha o arquivo de indice
 	fclose(arqind);
+
 	/* Laço para passar lendo a entrada n vezes */
 	for(atual = 0; atual < n; atual++){
 		//ler a proxima entrada
@@ -1137,7 +1144,6 @@ int remocaoindice(char* readFile, char* indFile, int n){
 		clearstring(entrada,100);
 		fgets(entrada,100,stdin);
 
-		
 		trim(entrada); 		//tira o \n e o \r da entrada
 
 		//funcao para gerar uma string nomeCampo[atual] e uma string valorCampo[atual]
